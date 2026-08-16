@@ -1,0 +1,44 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+
+# next.js
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+
+# build output
+frontend/dist/
+frontend/build/
+backend/bin/
+ai-service/.venv/
+*.pyc
+__pycache__/
+.ai-venv/
+
+# env / secrets
+.env
+.env.local
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+
+# misc
+.DS_Store
+*.log
+coverage/
+.nyc_output/
+
+# go
+backend/coverage.out
+backend/mycoach-api
+
+# python
+ai-service/*.egg-info/
+ai-service/dist/
