@@ -51,7 +51,12 @@ func run(logger *slog.Logger) error {
 	logger.Info("migrations applied")
 
 	tokens := auth.NewManager(cfg.JWTSecret, cfg.SessionTTL)
-	sessions := session.NewManager("session", cfg.SessionTTL, false)
+	cookieSecure := cfg.FrontendBaseURL != "" && cfg.FrontendBaseURL != "http://localhost:3000"
+	sameSite := http.SameSiteLaxMode
+	if cookieSecure {
+		sameSite = http.SameSiteNoneMode
+	}
+	sessions := session.NewManager("session", cfg.SessionTTL, cookieSecure, sameSite)
 
 	deps := &httpapi.Deps{
 		Users:    users.NewStore(pool),

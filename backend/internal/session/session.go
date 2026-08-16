@@ -11,13 +11,14 @@ type Manager struct {
 	CookieName string
 	TTL        time.Duration
 	Secure     bool
+	SameSite   http.SameSite
 }
 
-func NewManager(cookieName string, ttl time.Duration, secure bool) *Manager {
-	return &Manager{CookieName: cookieName, TTL: ttl, Secure: secure}
+func NewManager(cookieName string, ttl time.Duration, secure bool, sameSite http.SameSite) *Manager {
+	return &Manager{CookieName: cookieName, TTL: ttl, Secure: secure, SameSite: sameSite}
 }
 
-// Set stores the token in an httpOnly, SameSite=Lax cookie.
+// Set stores the token in an httpOnly cookie.
 func (m *Manager) Set(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     m.CookieName,
@@ -26,7 +27,7 @@ func (m *Manager) Set(w http.ResponseWriter, token string) {
 		MaxAge:   int(m.TTL.Seconds()),
 		HttpOnly: true,
 		Secure:   m.Secure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: m.SameSite,
 	})
 }
 
@@ -39,6 +40,6 @@ func (m *Manager) Clear(w http.ResponseWriter) {
 		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   m.Secure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: m.SameSite,
 	})
 }
