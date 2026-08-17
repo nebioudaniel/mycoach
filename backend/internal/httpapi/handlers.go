@@ -5,6 +5,7 @@ import (
 
 	"github.com/mycoach/backend/internal/auth"
 	"github.com/mycoach/backend/internal/config"
+	"github.com/mycoach/backend/internal/github"
 	"github.com/mycoach/backend/internal/learning"
 	"github.com/mycoach/backend/internal/session"
 	"github.com/mycoach/backend/internal/users"
@@ -14,6 +15,7 @@ import (
 type Handlers struct {
 	Users    *users.Handler
 	Learning *learning.Handler
+	GitHub   *github.Handler
 	Tokens   *auth.Manager
 }
 
@@ -22,7 +24,14 @@ func NewHandlers(cfg *config.Config, logger *slog.Logger, deps *Deps) *Handlers 
 	return &Handlers{
 		Users:    users.NewHandler(deps.Users, deps.Tokens, deps.Sessions, logger, cfg.FrontendBaseURL),
 		Learning: learning.NewHandler(deps.Learning, logger),
-		Tokens:   deps.Tokens,
+		GitHub:   github.NewHandler(deps.GitHub, github.GitHubConfig{
+			ClientID:     cfg.GitHubClientID,
+			ClientSecret: cfg.GitHubSecret,
+			CallbackURL:  cfg.GitHubCallback,
+			Scopes:       cfg.GitHubScopes,
+			FrontendURL:  cfg.FrontendBaseURL,
+		}, logger),
+		Tokens: deps.Tokens,
 	}
 }
 
@@ -30,6 +39,7 @@ func NewHandlers(cfg *config.Config, logger *slog.Logger, deps *Deps) *Handlers 
 type Deps struct {
 	Users    *users.Store
 	Learning *learning.Store
+	GitHub   *github.Store
 	Tokens   *auth.Manager
 	Sessions *session.Manager
 }

@@ -20,6 +20,13 @@ func (s *Server) routes(h *Handlers) {
 		r.Post("/register", h.Users.Register)
 		r.Post("/login", h.Users.Login)
 		r.Post("/logout", h.Users.Logout)
+
+		// GitHub OAuth
+		r.Route("/github", func(r chi.Router) {
+			r.Use(h.Tokens.Middleware)
+			r.Get("/", h.GitHub.StartOAuth)
+		})
+		s.router.Get("/api/auth/github/callback", h.GitHub.Callback)
 	})
 
 	// ─── Me ──────────────────────────────────────────────────────────────
@@ -61,5 +68,15 @@ func (s *Server) routes(h *Handlers) {
 	s.router.Route("/api/journal", func(r chi.Router) {
 		r.Use(h.Tokens.Middleware)
 		r.Get("/", h.Learning.ListJournal)
+	})
+
+	// ─── GitHub ──────────────────────────────────────────────────────────
+	s.router.Route("/api/github", func(r chi.Router) {
+		r.Use(h.Tokens.Middleware)
+		r.Get("/connected", h.GitHub.Connected)
+		r.Get("/repos", h.GitHub.ListRepos)
+		r.Get("/repos/{id}", h.GitHub.GetRepo)
+		r.Get("/repos/{id}/issues", h.GitHub.ListIssues)
+		r.Get("/issues/{owner}/{repo}", h.GitHub.ListIssuesByOwnerRepo)
 	})
 }
