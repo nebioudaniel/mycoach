@@ -15,6 +15,7 @@ import (
 	"github.com/mycoach/backend/internal/config"
 	"github.com/mycoach/backend/internal/db"
 	"github.com/mycoach/backend/internal/httpapi"
+	"github.com/mycoach/backend/internal/learning"
 	"github.com/mycoach/backend/internal/session"
 	"github.com/mycoach/backend/internal/users"
 )
@@ -60,6 +61,7 @@ func run(logger *slog.Logger) error {
 
 	deps := &httpapi.Deps{
 		Users:    users.NewStore(pool),
+		Learning: learning.NewStore(pool),
 		Tokens:   tokens,
 		Sessions: sessions,
 	}
