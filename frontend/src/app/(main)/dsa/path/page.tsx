@@ -1,26 +1,16 @@
 "use client";
 
-import { Card, CardTitle, CardHeader } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { Check, Circle, ArrowRight } from "lucide-react";
 
-const PATH = [
-  { slug: "programming-fundamentals", title: "Programming Fundamentals", status: "mastered" as const, mastery: 100 },
-  { slug: "big-o", title: "Big O Notation", status: "mastered" as const, mastery: 100 },
-  { slug: "arrays", title: "Arrays", status: "mastered" as const, mastery: 100 },
-  { slug: "strings", title: "Strings", status: "learning" as const, mastery: 75 },
-  { slug: "hash-maps", title: "Hash Maps", status: "learning" as const, mastery: 60 },
-  { slug: "linked-lists", title: "Linked Lists", status: "not_started" as const, mastery: 0 },
-  { slug: "stacks-queues", title: "Stacks & Queues", status: "not_started" as const, mastery: 0 },
-  { slug: "trees", title: "Trees", status: "not_started" as const, mastery: 0 },
-  { slug: "graphs", title: "Graphs", status: "not_started" as const, mastery: 0 },
-  { slug: "sorting", title: "Sorting Algorithms", status: "not_started" as const, mastery: 0 },
-  { slug: "searching", title: "Searching", status: "not_started" as const, mastery: 0 },
-  { slug: "recursion", title: "Recursion", status: "not_started" as const, mastery: 0 },
-  { slug: "dynamic-programming", title: "Dynamic Programming", status: "not_started" as const, mastery: 0 },
-];
+type Topic = {
+  id: string; slug: string; title: string; difficulty: string; position: number;
+  status: string; mastery: number;
+};
 
 const statusIcon: Record<string, { icon: typeof Check; cls: string; ring: string }> = {
   mastered: { icon: Check, cls: "bg-primary text-primary-foreground", ring: "ring-0" },
@@ -35,7 +25,31 @@ const statusBadge: Record<string, { label: string; variant: "default" | "seconda
 };
 
 export default function LearningPathPage() {
-  const mastered = PATH.filter((t) => t.status === "mastered").length;
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/topics", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setTopics(d))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const mastered = topics.filter((t) => t.status === "mastered").length;
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
+        <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
@@ -45,9 +59,9 @@ export default function LearningPathPage() {
           A structured progression from fundamentals to advanced topics.
         </p>
         <div className="mt-3 flex items-center gap-3">
-          <Progress value={mastered} max={PATH.length} className="max-w-xs" size="sm" />
+          <Progress value={mastered} max={topics.length} className="max-w-xs" size="sm" />
           <span className="text-xs text-muted-foreground tabular-nums">
-            {mastered}/{PATH.length} mastered
+            {mastered}/{topics.length} mastered
           </span>
         </div>
       </div>
@@ -55,10 +69,10 @@ export default function LearningPathPage() {
       <div className="relative">
         <div className="absolute left-[17px] top-6 bottom-6 w-px bg-border" />
         <div className="space-y-1">
-          {PATH.map((topic) => {
-            const s = statusIcon[topic.status];
+          {topics.map((topic) => {
+            const s = statusIcon[topic.status] || statusIcon.not_started;
             const Icon = s.icon;
-            const badge = statusBadge[topic.status];
+            const badge = statusBadge[topic.status] || statusBadge.not_started;
             return (
               <Link key={topic.slug} href={`/dsa/topics/${topic.slug}`}>
                 <div className="relative flex items-center gap-4 px-3 py-3 rounded-lg hover:bg-accent transition-colors group">
@@ -83,6 +97,12 @@ export default function LearningPathPage() {
           })}
         </div>
       </div>
+
+      {topics.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-sm text-muted-foreground">No topics available yet.</p>
+        </div>
+      )}
     </div>
   );
 }

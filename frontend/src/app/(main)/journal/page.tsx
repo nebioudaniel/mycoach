@@ -1,34 +1,14 @@
 "use client";
 
-import { Card, CardTitle, CardHeader } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
 import { BookOpen, Trophy, AlertTriangle, GitBranch, Sparkles, Calendar } from "lucide-react";
 
-const ENTRIES = [
-  {
-    date: "August 16, 2026",
-    learned: ["Hash Maps internals", "Two Pointers pattern"],
-    struggled: ["Recognizing sliding window problems"],
-    solved: ["Two Sum", "Valid Anagram"],
-    opensource: ["Analyzed kubernetes/kubernetes", "Reviewed issue #12847"],
-    recommendation: "Review sliding window problems tomorrow — you struggled to identify the pattern. Try 2-3 sliding window problems to solidify the approach.",
-  },
-  {
-    date: "August 15, 2026",
-    learned: ["Array basics", "Big O notation"],
-    struggled: ["Understanding O(n²) complexity"],
-    solved: ["Contains Duplicate"],
-    opensource: [],
-    recommendation: "Focus on Big O analysis — try to derive the complexity for each solution before submitting.",
-  },
-  {
-    date: "August 14, 2026",
-    learned: ["Git branching strategies", "Pull request workflow"],
-    struggled: ["Understanding CI/CD pipelines"],
-    solved: [],
-    opensource: ["Explored Grafana repo", "Read CONTRIBUTING.md"],
-    recommendation: "Continue with DSA fundamentals while keeping open source exploration as a secondary activity.",
-  },
-];
+type JournalEntryData = {
+  id: string; date: string;
+  entries: { learned?: string[]; struggled?: string[]; solved?: string[]; opensource?: string[] };
+  recommendation: string;
+};
 
 const sectionConfig = {
   learned: { icon: BookOpen, label: "Learned" },
@@ -38,6 +18,26 @@ const sectionConfig = {
 };
 
 export default function JournalPage() {
+  const [entries, setEntries] = useState<JournalEntryData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/journal", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setEntries(d))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
+        <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+        {[1, 2].map((i) => <div key={i} className="h-40 bg-muted rounded-lg animate-pulse" />)}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
       <div>
@@ -46,15 +46,15 @@ export default function JournalPage() {
       </div>
 
       <div className="space-y-5">
-        {ENTRIES.map((entry, i) => (
-          <Card key={i} padding="lg">
+        {entries.map((entry) => (
+          <Card key={entry.id} padding="lg">
             <div className="flex items-center gap-2 mb-4">
               <Calendar size={14} className="text-muted-foreground" />
-              <h2 className="text-sm font-semibold">{entry.date}</h2>
+              <h2 className="text-sm font-semibold">{new Date(entry.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</h2>
             </div>
             <div className="space-y-4">
               {(["learned", "struggled", "solved", "opensource"] as const).map((key) => {
-                const items = entry[key];
+                const items = entry.entries?.[key] || [];
                 if (!items.length) return null;
                 const config = sectionConfig[key];
                 const Icon = config.icon;
@@ -88,6 +88,12 @@ export default function JournalPage() {
           </Card>
         ))}
       </div>
+
+      {entries.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-sm text-muted-foreground">No journal entries yet. Start learning to build your journal.</p>
+        </div>
+      )}
     </div>
   );
 }

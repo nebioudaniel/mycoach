@@ -1,34 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowRight, Search } from "lucide-react";
 
-const PROBLEMS = [
-  { slug: "two-sum", title: "Two Sum", difficulty: "easy", topics: ["arrays", "hash-maps"], solved: true },
-  { slug: "valid-anagram", title: "Valid Anagram", difficulty: "easy", topics: ["strings", "hash-maps"], solved: true },
-  { slug: "contains-duplicate", title: "Contains Duplicate", difficulty: "easy", topics: ["arrays"], solved: true },
-  { slug: "longest-substring-without-repeating", title: "Longest Substring Without Repeating Characters", difficulty: "medium", topics: ["strings", "sliding-window"], solved: false },
-  { slug: "container-with-most-water", title: "Container With Most Water", difficulty: "medium", topics: ["two-pointers"], solved: false },
-  { slug: "3sum", title: "3Sum", difficulty: "medium", topics: ["two-pointers", "sorting"], solved: false },
-  { slug: "reverse-linked-list", title: "Reverse Linked List", difficulty: "easy", topics: ["linked-lists"], solved: false },
-  { slug: "binary-tree-inorder", title: "Binary Tree Inorder Traversal", difficulty: "easy", topics: ["trees"], solved: false },
-];
+type Problem = {
+  id: string; slug: string; title: string; difficulty: string; topics: string[]; solved: boolean;
+};
 
 export default function PracticePage() {
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  const filtered = PROBLEMS.filter((p) => {
+  useEffect(() => {
+    fetch("/api/problems", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setProblems(d))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = problems.filter((p) => {
     if (filter === "solved" && !p.solved) return false;
     if (filter === "unsolved" && p.solved) return false;
     if (filter !== "all" && filter !== "solved" && filter !== "unsolved" && p.difficulty !== filter) return false;
     if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+        <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -70,7 +85,7 @@ export default function PracticePage() {
                   <Badge variant="outline">{p.difficulty}</Badge>
                 </div>
                 <div className="flex gap-1.5 mt-1">
-                  {p.topics.map((t) => (
+                  {(p.topics || []).map((t) => (
                     <span key={t} className="text-xs text-muted-foreground">{t}</span>
                   ))}
                 </div>

@@ -1,59 +1,95 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft, Send, Lightbulb, CheckCircle2, XCircle, Code2, ChevronDown, ChevronUp } from "lucide-react";
 
-const PROBLEMS: Record<string, any> = {
-  "two-sum": {
-    title: "Two Sum", difficulty: "easy", topics: ["arrays", "hash-maps"],
-    descriptionMd: `Given an array of integers \`nums\` and an integer \`target\`, return indices of the two numbers such that they add up to \`target\`.\n\nYou may assume that each input would have **exactly one solution**, and you may not use the same element twice.`,
-    examples: [
-      { input: "nums = [2,7,11,15], target = 9", output: "[0,1]", explanation: "nums[0] + nums[1] == 9" },
-      { input: "nums = [3,2,4], target = 6", output: "[1,2]", explanation: "nums[1] + nums[2] == 6" },
-    ],
-    constraintsMd: "2 <= nums.length <= 10⁴\n-10⁹ <= nums[i] <= 10⁹\nOnly one valid answer exists.",
-    starterCode: { python: `def twoSum(nums, target):\n    # Your solution here\n    pass`, go: `func twoSum(nums []int, target int) []int {\n\t// Your solution here\n\treturn nil\n}` },
-  },
-  "valid-anagram": {
-    title: "Valid Anagram", difficulty: "easy", topics: ["strings", "hash-maps"],
-    descriptionMd: `Given two strings \`s\` and \`t\`, return \`true\` if \`t\` is an anagram of \`s\`, and \`false\` otherwise.`,
-    examples: [
-      { input: 's = "anagram", t = "nagaram"', output: "true", explanation: "Same characters with same frequency." },
-      { input: 's = "rat", t = "car"', output: "false", explanation: "Different characters." },
-    ],
-    constraintsMd: "1 <= s.length, t.length <= 5 * 10⁴",
-    starterCode: { python: `def isAnagram(s, t):\n    # Your solution here\n    pass`, go: `func isAnagram(s string, t string) bool {\n\t// Your solution here\n\treturn false\n}` },
-  },
+type ProblemData = {
+  id: string; slug: string; title: string; difficulty: string; topics: string[];
+  descriptionMd: string; examples: { input: string; output: string; explanation?: string }[];
+  constraintsMd: string; starterCode: Record<string, string>; source: string;
+};
+
+type AttemptData = {
+  id: string; language: string; code: string; status: string; correctness: boolean | null;
 };
 
 export default function ProblemWorkspace({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params) as { slug: string };
-  const problem = PROBLEMS[slug] ?? {
-    title: slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
-    difficulty: "medium", topics: [] as string[],
-    descriptionMd: "Problem description coming soon.",
-    examples: [] as any[], constraintsMd: "",
-    starterCode: { python: "# Write your solution\ndef solve():\n    pass", go: "// Write your solution\nfunc Solve() {\n}" },
-  };
-
+  const [problem, setProblem] = useState<ProblemData | null>(null);
+  const [attempt, setAttempt] = useState<AttemptData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState<"python" | "go">("python");
-  const [code, setCode] = useState(problem.starterCode.python);
+  const [code, setCode] = useState("");
   const [hintLevel, setHintLevel] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [result, setResult] = useState<{ correct: boolean } | null>(null);
   const [showExamples, setShowExamples] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/problems/${slug}`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => {
+        setProblem(d.problem);
+        setAttempt(d.attempt || null);
+        const starter = d.problem?.starterCode?.python || "# Write your solution\n";
+        setCode(d.attempt?.code || starter);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  const handleSubmit = async () => {
+    if (!problem) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/problems/${slug}/submit`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language, code }),
+      });
+      const data = await res.json();
+      setAttempt(data);
+      setShowResult(true);
+      setResult({ correct: data.status === "solved" });
+    } catch {
+      setShowResult(true);
+      setResult({ correct: false });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto animate-fade-in">
+        <div className="h-6 w-32 bg-muted rounded animate-pulse mb-4" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="h-96 bg-muted rounded-xl animate-pulse" />
+          <div className="h-96 bg-muted rounded-xl animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  const p = problem || {
+    title: slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+    difficulty: "medium", topics: [] as string[],
+    descriptionMd: "Problem description coming soon.",
+    examples: [] as any[], constraintsMd: "",
+    starterCode: { python: "# Write your solution\n", go: "// Write your solution\n" },
+  };
 
   const HINTS = [
     "Think about what data structure allows O(1) lookups by key.",
     "What if you stored each number's complement as you iterate?",
     "For each element, check if (target - element) exists in your map.",
   ];
-
-  const handleSubmit = () => { setShowResult(true); setResult({ correct: false }); };
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in">
@@ -62,40 +98,40 @@ export default function ProblemWorkspace({ params }: { params: Promise<{ slug: s
           <ArrowLeft size={14} /> Practice
         </Link>
         <span>/</span>
-        <span className="text-foreground">{problem.title}</span>
+        <span className="text-foreground">{p.title}</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card padding="lg" className="overflow-y-auto max-h-[calc(100dvh-12rem)]">
           <div className="flex items-center gap-2 mb-4">
-            <h1 className="text-lg font-semibold tracking-tight">{problem.title}</h1>
-            <Badge variant="outline">{problem.difficulty}</Badge>
+            <h1 className="text-lg font-semibold tracking-tight">{p.title}</h1>
+            <Badge variant="outline">{p.difficulty}</Badge>
           </div>
           <div className="flex gap-1.5 mb-4">
-            {problem.topics.map((t: string) => <Badge key={t} variant="secondary">{t}</Badge>)}
+            {(p.topics || []).map((t: string) => <Badge key={t} variant="secondary">{t}</Badge>)}
           </div>
-          <div className="text-sm leading-relaxed whitespace-pre-line mb-5">{problem.descriptionMd}</div>
+          <div className="text-sm leading-relaxed whitespace-pre-line mb-5">{p.descriptionMd}</div>
 
-          {problem.examples.length > 0 && (
+          {p.examples.length > 0 && (
             <div>
               <button onClick={() => setShowExamples(!showExamples)} className="flex items-center gap-2 text-sm font-medium mb-2">
                 Examples {showExamples ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               </button>
-              {showExamples && problem.examples.map((ex: any, i: number) => (
+              {showExamples && p.examples.map((ex: any, i: number) => (
                 <div key={i} className="bg-muted rounded-lg p-3 border border-border mb-3">
                   <p className="text-xs text-muted-foreground mb-1">Example {i + 1}</p>
                   <p className="text-sm"><code className="text-muted-foreground font-medium">Input:</code> {ex.input}</p>
                   <p className="text-sm"><code className="text-muted-foreground font-medium">Output:</code> {ex.output}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{ex.explanation}</p>
+                  {ex.explanation && <p className="text-xs text-muted-foreground mt-1">{ex.explanation}</p>}
                 </div>
               ))}
             </div>
           )}
 
-          {problem.constraintsMd && (
+          {p.constraintsMd && (
             <div className="mt-4">
               <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">Constraints</h3>
-              <p className="text-xs text-muted-foreground whitespace-pre-line">{problem.constraintsMd}</p>
+              <p className="text-xs text-muted-foreground whitespace-pre-line">{p.constraintsMd}</p>
             </div>
           )}
         </Card>
@@ -104,7 +140,7 @@ export default function ProblemWorkspace({ params }: { params: Promise<{ slug: s
           <div className="flex items-center gap-2">
             <div className="flex gap-1 p-1 bg-muted rounded-lg">
               {(["python", "go"] as const).map((lang) => (
-                <button key={lang} onClick={() => { setLanguage(lang); setCode(problem.starterCode[lang]); }}
+                <button key={lang} onClick={() => { setLanguage(lang); setCode(problem?.starterCode?.[lang] || "# Write your solution\n"); }}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
                     language === lang ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                   }`}>
@@ -140,8 +176,9 @@ export default function ProblemWorkspace({ params }: { params: Promise<{ slug: s
           )}
 
           <div className="flex items-center gap-2">
-            <Button onClick={handleSubmit} icon={<Send size={14} />}>Submit</Button>
-            <Button variant="outline" size="sm">Run tests</Button>
+            <Button onClick={handleSubmit} disabled={submitting} icon={<Send size={14} />}>
+              {submitting ? "Submitting..." : "Submit"}
+            </Button>
           </div>
 
           {showResult && result && (
@@ -152,7 +189,7 @@ export default function ProblemWorkspace({ params }: { params: Promise<{ slug: s
                   <p className={`font-medium ${result.correct ? "" : "text-destructive"}`}>
                     {result.correct ? "Accepted" : "Incorrect"}
                   </p>
-                  {!result.correct && <p className="text-muted-foreground mt-1">Think about the approach — try using a hash map to store complements.</p>}
+                  {!result.correct && <p className="text-muted-foreground mt-1">Think about the approach — review the hints and try again.</p>}
                 </div>
               </div>
             </Card>

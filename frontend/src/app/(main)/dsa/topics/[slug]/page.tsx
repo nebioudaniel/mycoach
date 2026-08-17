@@ -1,141 +1,152 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardTitle, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen, Lightbulb, Target, Zap, Brain, CheckCircle2 } from "lucide-react";
 
-const TOPIC_DATA: Record<string, any> = {
-  "hash-maps": {
-    title: "Hash Maps",
-    difficulty: "beginner",
-    mastery: 60,
-    what: "A hash map (or dictionary) is a data structure that stores key-value pairs. It uses a hash function to compute an index into an array of buckets or slots, from which the desired value can be found. Hash maps provide average O(1) time complexity for lookups, insertions, and deletions.",
-    why: "Imagine you have 1,000 books and need to find a specific one. Without a system, you'd check each book one by one. A hash map is like an organized library where each book has a unique shelf address — you go directly to it.",
-    mentalModel: "Think of a hash map as a magical vending machine. You put in a specific coin (key), and it instantly knows which slot to dispense from (value).",
-    visual: "┌─────────────────────────────┐\n│  Hash Map: name → age       │\n├─────────┬───────────────────┤\n│  Index  │  Key → Value      │\n├─────────┼───────────────────┤\n│    0    │                   │\n│    1    │  \"Alice\" → 25     │\n│    2    │  \"Bob\" → 30       │\n│    3    │  \"Carol\" → 28     │\n└─────────┴───────────────────┘",
-    examples: [
-      { code: "# Python\nages = {}\nages[\"Alice\"] = 25\nages[\"Bob\"] = 30\nprint(ages[\"Alice\"])  # 25", explanation: "Create an empty hash map, add two entries, and look up Alice's age." },
-      { code: "// Go\nages := map[string]int{}\nages[\"Alice\"] = 25\nages[\"Bob\"] = 30\nfmt.Println(ages[\"Alice\"]) // 25", explanation: "Same operation in Go using the built-in map type." },
-    ],
-    complexity: { "Lookup": "O(1) average", "Insertion": "O(1) average", "Deletion": "O(1) average", "Worst case": "O(n) — all keys hash to same bucket" },
-    tryIt: ["Count word frequency in a sentence", "Find the most common element in an array", "Check if two arrays have any common elements"],
-    checkUnderstanding: ["Why are hash maps O(1) on average but O(n) worst case?", "What makes a good hash function?", "When would you use a hash map instead of an array?", "What is a hash collision and how do maps handle it?"],
-  },
+type TopicContent = {
+  what?: string; why?: string; mentalModel?: string; visual?: string;
+  examples?: string[]; complexity?: Record<string, string>;
+  tryIt?: string[]; checkUnderstanding?: string[]; resources?: string[];
 };
 
-const DEFAULT_TOPIC = {
-  title: "Topic", difficulty: "beginner", mastery: 0,
-  what: "This topic content is being developed. Check back soon for structured lessons.",
-  why: "", mentalModel: "", visual: "", examples: [] as any[], complexity: {} as Record<string, string>, tryIt: [] as string[], checkUnderstanding: [] as string[],
+type TopicData = {
+  topic: {
+    id: string; slug: string; title: string; difficulty: string; content: TopicContent; position: number;
+  };
+  progress?: { status: string; mastery: number };
 };
 
 export default function TopicPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params) as { slug: string };
-  const data = TOPIC_DATA[slug] ?? { ...DEFAULT_TOPIC, title: slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) };
+  const [data, setData] = useState<TopicData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/topics/${slug}`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
+        <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+        <div className="h-48 bg-muted rounded-lg animate-pulse" />
+      </div>
+    );
+  }
+
+  const topic = data?.topic;
+  const progress = data?.progress;
+  const c = topic?.content || {};
+
+  const displayTitle = topic?.title || slug.replace(/-/g, " ").replace(/\b\w/g, (ch: string) => ch.toUpperCase());
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/dsa/topics" className="hover:text-foreground transition-colors">Topics</Link>
         <span>/</span>
-        <span>{data.title}</span>
+        <span>{displayTitle}</span>
       </div>
 
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold tracking-tight">{data.title}</h1>
-          <Badge variant="outline">{data.difficulty}</Badge>
+          <h1 className="text-lg font-semibold tracking-tight">{displayTitle}</h1>
+          {topic && <Badge variant="outline">{topic.difficulty}</Badge>}
         </div>
-        {data.mastery > 0 && (
+        {progress && progress.mastery > 0 && (
           <div className="mt-3 flex items-center gap-3 max-w-sm">
-            <Progress value={data.mastery} size="sm" />
-            <span className="text-xs text-muted-foreground tabular-nums">{data.mastery}% mastery</span>
+            <Progress value={progress.mastery} size="sm" />
+            <span className="text-xs text-muted-foreground tabular-nums">{progress.mastery}% mastery</span>
           </div>
         )}
       </div>
 
-      <Card padding="lg">
-        <div className="flex items-center gap-2 mb-3">
-          <BookOpen size={16} className="text-muted-foreground" />
-          <CardTitle>What is it?</CardTitle>
-        </div>
-        <p className="text-sm leading-relaxed">{data.what}</p>
-      </Card>
+      {c.what && (
+        <Card padding="lg">
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen size={16} className="text-muted-foreground" />
+            <CardTitle>What is it?</CardTitle>
+          </div>
+          <p className="text-sm leading-relaxed">{c.what}</p>
+        </Card>
+      )}
 
-      {data.why && (
+      {c.why && (
         <Card padding="lg">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb size={16} className="text-muted-foreground" />
             <CardTitle>Why does it exist?</CardTitle>
           </div>
-          <p className="text-sm leading-relaxed">{data.why}</p>
+          <p className="text-sm leading-relaxed">{c.why}</p>
         </Card>
       )}
 
-      {data.mentalModel && (
+      {c.mentalModel && (
         <Card padding="lg">
           <div className="flex items-center gap-2 mb-3">
             <Brain size={16} className="text-muted-foreground" />
             <CardTitle>Mental Model</CardTitle>
           </div>
-          <p className="text-sm leading-relaxed text-muted-foreground italic">{data.mentalModel}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground italic">{c.mentalModel}</p>
         </Card>
       )}
 
-      {data.visual && (
+      {c.visual && (
         <Card padding="lg">
           <div className="flex items-center gap-2 mb-3">
             <Target size={16} className="text-muted-foreground" />
             <CardTitle>Visual Example</CardTitle>
           </div>
           <pre className="text-sm bg-muted rounded-lg p-4 overflow-x-auto border border-border">
-            <code>{data.visual}</code>
+            <code>{c.visual}</code>
           </pre>
         </Card>
       )}
 
-      {data.examples?.length > 0 && (
+      {c.examples && c.examples.length > 0 && (
         <Card padding="lg">
           <div className="flex items-center gap-2 mb-3">
             <Zap size={16} className="text-muted-foreground" />
             <CardTitle>Examples</CardTitle>
           </div>
-          <div className="space-y-4">
-            {data.examples.map((ex: any, i: number) => (
-              <div key={i}>
-                <pre className="text-sm bg-muted rounded-lg p-4 overflow-x-auto border border-border">
-                  <code>{ex.code}</code>
-                </pre>
-                <p className="text-xs text-muted-foreground mt-2">{ex.explanation}</p>
-              </div>
+          <ul className="space-y-2">
+            {c.examples.map((ex: string, i: number) => (
+              <li key={i} className="flex items-start gap-2 text-sm">
+                <span className="text-muted-foreground mt-0.5">{i + 1}.</span>
+                <span>{ex}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         </Card>
       )}
 
-      {Object.keys(data.complexity).length > 0 && (
+      {c.complexity && Object.keys(c.complexity).length > 0 && (
         <Card padding="lg">
           <CardTitle>Complexity</CardTitle>
           <div className="grid grid-cols-2 gap-2 mt-4">
-            {Object.entries(data.complexity).map(([op, c]) => (
+            {Object.entries(c.complexity).map(([op, val]) => (
               <div key={op} className="flex items-center justify-between px-3 py-2 bg-muted rounded-lg border border-border">
                 <span className="text-sm text-muted-foreground">{op}</span>
-                <code className="text-sm">{c as string}</code>
+                <code className="text-sm">{val}</code>
               </div>
             ))}
           </div>
         </Card>
       )}
 
-      {data.tryIt?.length > 0 && (
+      {c.tryIt && c.tryIt.length > 0 && (
         <Card padding="lg">
           <CardTitle>Try It</CardTitle>
           <ul className="space-y-2 mt-4">
-            {data.tryIt.map((item: string, i: number) => (
+            {c.tryIt.map((item: string, i: number) => (
               <li key={i} className="flex items-start gap-2 text-sm">
                 <span className="text-muted-foreground mt-0.5">{i + 1}.</span>
                 {item}
@@ -145,11 +156,11 @@ export default function TopicPage({ params }: { params: Promise<{ slug: string }
         </Card>
       )}
 
-      {data.checkUnderstanding?.length > 0 && (
+      {c.checkUnderstanding && c.checkUnderstanding.length > 0 && (
         <Card padding="lg">
           <CardTitle>Check Understanding</CardTitle>
           <ul className="space-y-2 mt-4">
-            {data.checkUnderstanding.map((q: string, i: number) => (
+            {c.checkUnderstanding.map((q: string, i: number) => (
               <li key={i} className="flex items-start gap-2 text-sm">
                 <CheckCircle2 size={14} className="text-muted-foreground mt-0.5 shrink-0" />
                 {q}
@@ -157,7 +168,9 @@ export default function TopicPage({ params }: { params: Promise<{ slug: string }
             ))}
           </ul>
           <div className="mt-4">
-            <Button variant="outline" size="sm">Ask your coach</Button>
+            <Link href="/dsa/practice" className="text-sm text-muted-foreground hover:text-foreground">
+              Practice problems →
+            </Link>
           </div>
         </Card>
       )}
