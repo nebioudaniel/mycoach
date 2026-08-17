@@ -1,15 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    const apiBase = process.env.BACKEND_API_URL || "http://localhost:8080";
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${apiBase}/api/:path*`,
-      },
-    ];
-  },
+  output: "export",
 };
 
 export default nextConfig;

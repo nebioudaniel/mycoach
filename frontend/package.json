@@ -5,9 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cloudflare": "npx opennextjs-cloudflare build",
-    "preview:cloudflare": "npx wrangler dev",
-    "deploy:cloudflare": "npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy",
     "start": "next start",
     "lint": "eslint"
   },
@@ -20,7 +17,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.20.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
